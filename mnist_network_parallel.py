@@ -4,7 +4,6 @@ import six
 import data
 import chainer
 import chainer.functions as F
-from chainer import computational_graph as c
 from chainer import cuda
 from chainer import optimizers
 from chainer import function
@@ -16,7 +15,7 @@ GPU1 = 0
 GPU2 = 1
 
 
-class NetworkParalell:
+class NetworkParallel:
     def __init__(self):
         pass
 
@@ -117,7 +116,7 @@ class NetworkParalell:
 
 
 def main():
-    test = NetworkParalell()
+    test = NetworkParallel()
     test.read_dataset()
     test.model_define()
     test.learning()
