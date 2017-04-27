@@ -19,9 +19,8 @@ class NetworkParallel:
     def __init__(self):
         pass
 
-
+    # Prepare dataset(MNIST)
     def read_dataset(self):
-        # Prepare dataset
         print('load MNIST dataset')
         mnist = data.load_mnist_data()
         mnist['data'] = mnist['data'].astype(np.float32)
@@ -32,6 +31,8 @@ class NetworkParallel:
         self.N = 60000
         self.x_train, self.x_test = np.split(mnist['data'],   [self.N])
         self.y_train, self.y_test = np.split(mnist['target'], [self.N])
+
+        # NUmber of test data
         self.N_test = self.y_test.size
 
 
@@ -66,8 +67,8 @@ class NetworkParallel:
 
     def learning(self):
         # Setup optimizer
-        optimizer = optimizers.Adam()
-        optimizer.setup(self.model.collect_parameters())
+        self.optimizer = optimizers.Adam()
+        self.optimizer.setup(self.model.collect_parameters())
 
         # Learning loop
         for epoch in six.moves.range(1, N_EPOCH + 1):
@@ -75,8 +76,8 @@ class NetworkParallel:
 
             # Training
             self.perm = np.random.permutation(self.N)
-            self.sum_accuracy = 0
-            self.sum_loss = 0
+            sum_accuracy = 0
+            sum_loss = 0
             for i in six.moves.range(0, self.N, BATCH_SIZE):
                 self.x_batch = self.x_train[self.perm[i:i + BATCH_SIZE]]
                 self.y_batch = self.y_train[self.perm[i:i + BATCH_SIZE]]
@@ -84,28 +85,28 @@ class NetworkParallel:
                 self.x_batch = cuda.to_gpu(self.x_batch, device=GPU1)
                 self.y_batch = cuda.to_gpu(self.y_batch, device=GPU2)
                 # Forward    
-                optimizer.zero_grads()
+                self.optimizer.zero_grads()
                 self.forward(self.x_batch, self.y_batch)
                 # Backward
                 self.loss.backward()
-                optimizer.update()
+                self.optimizer.update()
                 # Calc loss and accuracy
-                self.sum_loss += float(cuda.to_cpu(self.loss.data)) * len(self.y_batch)
-                self.sum_accuracy += float(cuda.to_cpu(self.acc.data)) * len(self.y_batch)
+                sum_loss += float(cuda.to_cpu(self.loss.data)) * len(self.y_batch)
+                sum_accuracy += float(cuda.to_cpu(self.acc.data)) * len(self.y_batch)
                     
-            print('train mean loss={}, accuracy={}'.format(self.sum_loss / self.N, self.sum_accuracy / self.N))
+            print('train mean loss={}, accuracy={}'.format(sum_loss / self.N, sum_accuracy / self.N))
 
             # Evaluation
-            self.sum_accuracy = 0
-            self.sum_loss = 0
+            sum_accuracy = 0
+            sum_loss = 0
             for i in six.moves.range(0, self.N_test, BATCH_SIZE):
                 # Forward
                 self.forward(self.x_batch, self.y_batch, train=False)
                 # Calc loss and accuracy                
-                self.sum_loss += float(cuda.to_cpu(self.loss.data)) * len(self.y_batch)
-                self.sum_accuracy += float(cuda.to_cpu(self.acc.data)) * len(self.y_batch)
+                sum_loss += float(cuda.to_cpu(self.loss.data)) * len(self.y_batch)
+                sum_accuracy += float(cuda.to_cpu(self.acc.data)) * len(self.y_batch)
 
-            print('test  mean loss={}, accuracy={}'.format(self.sum_loss / self.N_test, self.sum_accuracy / self.N_test))
+            print('test  mean loss={}, accuracy={}'.format(sum_loss / self.N_test, sum_accuracy / self.N_test))
 
 
 
