@@ -99,11 +99,6 @@ class NetworkParallel:
             self.sum_accuracy = 0
             self.sum_loss = 0
             for i in six.moves.range(0, self.N_test, BATCH_SIZE):
-                self.x_batch = self.x_test[i:i + BATCH_SIZE]
-                self.y_batch = self.y_test[i:i + BATCH_SIZE]
-                # Reshape data for GPU
-                self.x_batch = cuda.to_gpu(self.x_batch, device=GPU1)
-                self.y_batch = cuda.to_gpu(self.y_batch, device=GPU2)
                 # Forward
                 self.forward(self.x_batch, self.y_batch, train=False)
                 # Calc loss and accuracy                
