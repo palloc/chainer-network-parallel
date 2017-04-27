@@ -16,7 +16,7 @@ GPU1 = 0
 GPU2 = 1
 
 
-class ModelParalell:
+class NetworkParalell:
     def __init__(self):
         pass
 
@@ -61,7 +61,7 @@ class ModelParalell:
         h3.data = cuda.to_gpu(h3.data, device=GPU2)
         h4 = F.dropout(F.relu(self.model2.l1(h3)), train=train)
         y = self.model2.l2(h4)
-    
+
         self.loss, self.acc = F.softmax_cross_entropy(y, t), F.accuracy(y, t)
 
 
@@ -74,40 +74,40 @@ class ModelParalell:
         for epoch in six.moves.range(1, N_EPOCH + 1):
             print('epoch', epoch)
 
-            # training
+            # Training
             self.perm = np.random.permutation(self.N)
             self.sum_accuracy = 0
             self.sum_loss = 0
             for i in six.moves.range(0, self.N, BATCH_SIZE):
                 self.x_batch = self.x_train[self.perm[i:i + BATCH_SIZE]]
                 self.y_batch = self.y_train[self.perm[i:i + BATCH_SIZE]]
-                    
+                # Reshape data for GPU
                 self.x_batch = cuda.to_gpu(self.x_batch, device=GPU1)
                 self.y_batch = cuda.to_gpu(self.y_batch, device=GPU2)
-                    
+                # Forward    
                 optimizer.zero_grads()
                 self.forward(self.x_batch, self.y_batch)
-                    
+                # Backward
                 self.loss.backward()
                 optimizer.update()
-                    
+                # Calc loss and accuracy
                 self.sum_loss += float(cuda.to_cpu(self.loss.data)) * len(self.y_batch)
                 self.sum_accuracy += float(cuda.to_cpu(self.acc.data)) * len(self.y_batch)
                     
             print('train mean loss={}, accuracy={}'.format(self.sum_loss / self.N, self.sum_accuracy / self.N))
 
-            # evaluation
+            # Evaluation
             self.sum_accuracy = 0
             self.sum_loss = 0
             for i in six.moves.range(0, self.N_test, BATCH_SIZE):
                 self.x_batch = self.x_test[i:i + BATCH_SIZE]
                 self.y_batch = self.y_test[i:i + BATCH_SIZE]
-
+                # Reshape data for GPU
                 self.x_batch = cuda.to_gpu(self.x_batch, device=GPU1)
                 self.y_batch = cuda.to_gpu(self.y_batch, device=GPU2)
-
+                # Forward
                 self.forward(self.x_batch, self.y_batch, train=False)
-                    
+                # Calc loss and accuracy                
                 self.sum_loss += float(cuda.to_cpu(self.loss.data)) * len(self.y_batch)
                 self.sum_accuracy += float(cuda.to_cpu(self.acc.data)) * len(self.y_batch)
 
@@ -117,7 +117,7 @@ class ModelParalell:
 
 
 def main():
-    test = ModelParalell()
+    test = NetworkParalell()
     test.read_dataset()
     test.model_define()
     test.learning()
