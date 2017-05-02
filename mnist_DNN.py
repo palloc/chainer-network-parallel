@@ -8,7 +8,6 @@ from chainer import cuda
 from chainer import optimizers
 from chainer import function
 
-from models.DNN import DNN_model
 
 BATCH_SIZE = 100
 N_EPOCH = 20
