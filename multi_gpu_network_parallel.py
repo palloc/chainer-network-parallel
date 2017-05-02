@@ -31,20 +31,20 @@ class NetworkParallel:
         self.N = 60000
         self.x_train, self.x_test = np.split(mnist['data'],   [self.N])
         self.y_train, self.y_test = np.split(mnist['target'], [self.N])
-
         # NUmber of test data
         self.N_test = self.y_test.size
 
 
     def model_define(self):
         # Model1 
-        self.model = chainer.FunctionSet(l1=F.Linear(784, 1000),
-                                         l2=F.Linear(1000, 1000),
-                                         l3=F.Linear(1000, 100))
+        self.model = chainer.FunctionSet(conv1=F.Convolution2D(1, 20, 5),
+                                         conv2=F.Convolution2D(20, 50, 5),
+                                         l1=F.Linear(200, 1000),
+                                         l2=F.Linear(1000, 1000))
 
         # Model2
-        self.model2 = chainer.FunctionSet(l1=F.Linear(100, 100),
-                                          l2=F.Linear(100, 10))
+        self.model2 = chainer.FunctionSet(l1=F.Linear(1000, 10000),
+                                          l2=F.Linear(10000, 10))
         # Assign models to GPU
         self.model.to_gpu(GPU1)
         self.model2.to_gpu(GPU2)
@@ -52,15 +52,17 @@ class NetworkParallel:
 
     # Neural net architecture
     def forward(self, x_data, y_data, train=True):
+        x_data = x_data.reshape((len(x_data), 1, 28, 28))
         x, t = chainer.Variable(x_data), chainer.Variable(y_data)
-            
-        h1 = F.dropout(F.relu(self.model.l1(x)),  train=train)
-        h2 = F.dropout(F.relu(self.model.l2(h1)), train=train)
-        h3 = F.relu(self.model.l3(h2))
+
+        h = F.max_pooling_2d(F.relu(self.model.conv1(x)), ksize=6,stride=3,pad=1)
+        h = F.max_pooling_2d(F.relu(self.model.conv2(h)), 2)
+        h = F.dropout(F.relu(self.model.l1(h)),  train=train)
+        h = F.relu(self.model.l2(h))
         # Change GPU1 --> GPU2
-        h3.data = cuda.to_gpu(h3.data, device=GPU2)
-        h4 = F.dropout(F.relu(self.model2.l1(h3)), train=train)
-        y = self.model2.l2(h4)
+        h.data = cuda.to_gpu(h.data, device=GPU2)
+        h = F.dropout(F.relu(self.model2.l1(h)), train=train)
+        y = self.model2.l2(h)
 
         self.loss, self.acc = F.softmax_cross_entropy(y, t), F.accuracy(y, t)
 
