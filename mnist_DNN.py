@@ -52,14 +52,14 @@ class NetworkParallel:
     def forward(self, x_data, y_data, train=True):
         x, t = chainer.Variable(x_data), chainer.Variable(y_data)
 
-        h1 = F.dropout(F.relu(self.model.l1(x)),  train=train)
-        h2 = F.dropout(F.relu(self.model.l2(h1)), train=train)
-        self.h3 = F.relu(self.model.l3(h2))
+        h = F.dropout(F.relu(self.model.l1(x)),  train=train)
+        h = F.dropout(F.relu(self.model.l2(h)), train=train)
+        h = F.relu(self.model.l3(h))
 
         # Change GPU1 --> GPU2
-        self.h3.data = cuda.to_gpu(self.h3.data, device=GPU2)
-        h4 = F.dropout(F.relu(self.model2.l1(self.h3)), train=train)
-        y = self.model2.l2(h4)
+        h.data = cuda.to_gpu(h.data, device=GPU2)
+        h = F.dropout(F.relu(self.model2.l1(h)), train=train)
+        y = self.model2.l2(h)
 
         self.loss, self.acc = F.softmax_cross_entropy(y, t), F.accuracy(y, t)
 
