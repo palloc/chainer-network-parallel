@@ -34,7 +34,7 @@ class NetworkParallel:
         # Number of test data
         self.N_test = self.y_test.size
 
-    def model_define(self):
+    def define_model(self):
         # Model1
         self.model = chainer.FunctionSet(l1=F.Linear(784, 1000),
                                          l2=F.Linear(1000, 1000),
@@ -72,10 +72,12 @@ class NetworkParallel:
         # Learning loop
         for epoch in six.moves.range(1, N_EPOCH + 1):
             print('epoch', epoch)
+
             # Training
             self.perm = np.random.permutation(self.N)
             sum_accuracy = 0
             sum_loss = 0
+
             for i in six.moves.range(0, self.N, BATCH_SIZE):
                 self.x_batch = self.x_train[self.perm[i:i + BATCH_SIZE]]
                 self.y_batch = self.y_train[self.perm[i:i + BATCH_SIZE]]
@@ -112,7 +114,7 @@ class NetworkParallel:
 def main():
     test = NetworkParallel()
     test.read_dataset()
-    test.model_define()
+    test.define_model()
     test.learning()
 
 
