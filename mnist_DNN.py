@@ -34,7 +34,6 @@ class NetworkParallel:
         # Number of test data
         self.N_test = self.y_test.size
 
-
     def model_define(self):
         # Model1
         self.model = chainer.FunctionSet(l1=F.Linear(784, 1000),
@@ -42,29 +41,29 @@ class NetworkParallel:
                                          l3=F.Linear(1000, 100))
 
         # Model2
-        self.model2 = chainer.FunctionSet(l1=F.Linear(100, 100),
-                                          l2=F.Linear(100, 10))
+        self.model2 = chainer.FunctionSet(l1=F.Linear(100, 1000),
+                                          l2=F.Linear(1000, 10))
 
         # Assign models to GPU
         self.model.to_gpu(GPU1)
         self.model2.to_gpu(GPU2)
 
-
     # Neural net architecture
     def forward(self, x_data, y_data, train=True):
         x, t = chainer.Variable(x_data), chainer.Variable(y_data)
-            
+
         h1 = F.dropout(F.relu(self.model.l1(x)),  train=train)
         h2 = F.dropout(F.relu(self.model.l2(h1)), train=train)
-        h3 = F.relu(self.model.l3(h2))
+        self.h3 = F.relu(self.model.l3(h2))
+
         # Change GPU1 --> GPU2
-        h3.data = cuda.to_gpu(h3.data, device=GPU2)
-        h4 = F.dropout(F.relu(self.model2.l1(h3)), train=train)
+        self.h3.data = cuda.to_gpu(self.h3.data, device=GPU2)
+        h4 = F.dropout(F.relu(self.model2.l1(self.h3)), train=train)
         y = self.model2.l2(h4)
 
         self.loss, self.acc = F.softmax_cross_entropy(y, t), F.accuracy(y, t)
 
-
+    # Setting learning options and start learning
     def learning(self):
         # Setup optimizer
         self.optimizer = optimizers.Adam()
@@ -73,7 +72,6 @@ class NetworkParallel:
         # Learning loop
         for epoch in six.moves.range(1, N_EPOCH + 1):
             print('epoch', epoch)
-
             # Training
             self.perm = np.random.permutation(self.N)
             sum_accuracy = 0
@@ -84,17 +82,18 @@ class NetworkParallel:
                 # Reshape data for GPU
                 self.x_batch = cuda.to_gpu(self.x_batch, device=GPU1)
                 self.y_batch = cuda.to_gpu(self.y_batch, device=GPU2)
-                # Forward    
+                # Forward
                 self.optimizer.zero_grads()
                 self.forward(self.x_batch, self.y_batch)
                 # Backward
                 self.loss.backward()
                 self.optimizer.update()
                 # Calc loss and accuracy
-                sum_loss += float(cuda.to_cpu(self.loss.data)) * len(self.y_batch)
-                sum_accuracy += float(cuda.to_cpu(self.acc.data)) * len(self.y_batch)
-                    
-            print('train mean loss={}, accuracy={}'.format(sum_loss / self.N, sum_accuracy / self.N))
+                sum_loss += float(cuda.to_cpu(self.loss.data))*len(self.y_batch)
+                sum_accuracy += float(cuda.to_cpu(self.acc.data))*len(self.y_batch)
+
+            print('train mean loss={}, accuracy={}'
+                  .format(sum_loss/self.N, sum_accuracy/self.N))
 
             # Evaluation
             sum_accuracy = 0
@@ -102,13 +101,12 @@ class NetworkParallel:
             for i in six.moves.range(0, self.N_test, BATCH_SIZE):
                 # Forward
                 self.forward(self.x_batch, self.y_batch, train=False)
-                # Calc loss and accuracy                
-                sum_loss += float(cuda.to_cpu(self.loss.data)) * len(self.y_batch)
-                sum_accuracy += float(cuda.to_cpu(self.acc.data)) * len(self.y_batch)
+                # Calc loss and accuracy
+                sum_loss += float(cuda.to_cpu(self.loss.data))*len(self.y_batch)
+                sum_accuracy += float(cuda.to_cpu(self.acc.data))*len(self.y_batch)
 
-            print('test  mean loss={}, accuracy={}'.format(sum_loss / self.N_test, sum_accuracy / self.N_test))
-
-
+            print('test  mean loss={}, accuracy={}'
+                  .format(sum_loss/self.N_test, sum_accuracy/self.N_test))
 
 
 def main():
