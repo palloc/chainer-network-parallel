@@ -14,7 +14,7 @@ BATCH_SIZE = 64
 N_EPOCH = 300
 GPU1 = 0
 GPU2 = 1
-CLASS_LABELS = 10
+CLASS_LABELS = 100
 
 
 class NetworkParallel:
@@ -24,7 +24,7 @@ class NetworkParallel:
     # Prepare dataset(MNIST)
     def read_dataset(self):
         print('load cifar100 dataset')
-        cifar100_train, cifar100_test = cifar.get_cifar10()
+        cifar100_train, cifar100_test = cifar.get_cifar100()
 
         # Create train data
         self.x_train = []
@@ -106,7 +106,6 @@ class NetworkParallel:
         y = self.model2.fc8(h)
 
         self.loss, self.acc = F.softmax_cross_entropy(y, t), F.accuracy(y, t)
-#        print(self.acc.data)
 
     # Setting learning options and start learning
     def learning(self):
